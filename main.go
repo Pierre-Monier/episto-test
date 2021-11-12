@@ -12,6 +12,7 @@ type Server struct {
 }
 
 var addr = flag.String("addr", ":8080", "http service address")
+var server = &Server{hubs: make(map[string]*Hub)}
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -26,31 +27,43 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "index.html")
 }
 
-func findOrCreateHub(server *Server, addr string) *Hub {
-	if hub, ok := server.hubs[addr]; ok {
+func findOrCreateHub(server *Server, r *http.Request) *Hub {
+	wantedRoom := r.URL.Query().Get("room")
+
+	if hub, ok := server.hubs[wantedRoom]; ok {
+		print("found hub")
 		return hub
 	}
-
+	print("create")
 	hub := newHub()
-	server.hubs[addr] = hub
+	server.hubs[wantedRoom] = hub
 	return hub
 }
 
 func main() {
 	flag.Parse()
-	server := &Server{hubs: make(map[string]*Hub)}
 
 	http.HandleFunc("/", serveHome)
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		wantedRoom := r.URL.Query().Get("room")
-
-		hub := findOrCreateHub(server, wantedRoom)
-		go hub.run()
-
-		serveWs(hub, w, r)
-	})
+	http.HandleFunc("/ws", start)
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
+}
+
+func start(w http.ResponseWriter, r *http.Request) {
+	oldLenght := len(server.hubs)
+	hub := findOrCreateHub(server, r)
+	newLenght := len(server.hubs)
+
+	if newLenght > oldLenght {
+		// I really don't get it, if the hub is created we can't access the broadcast channel
+		// the only solution I currently find is to re execute the function
+		// look like the hub must be create before calling the start function
+		start(w, r)
+	}
+
+	go hub.run()
+
+	serveWs(hub, w, r)
 }

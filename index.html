@@ -31,6 +31,7 @@ window.onload = function () {
     if (window["WebSocket"]) {
         const roomName = document.location.href.split("room=")[1]
         conn = new WebSocket("ws://" + document.location.host + "/ws?room=" + roomName);
+
         conn.onclose = function (evt) {
             var item = document.createElement("div");
             item.innerHTML = "<b>Connection closed.</b>";

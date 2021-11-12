@@ -123,7 +123,12 @@ func (c *Client) writePump() {
 
 // serveWs handles websocket requests from the peer.
 func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
-	wantedUsername := r.URL.Query().Get("username")
+	wantedUsername := "Anonymous"
+
+	if r.URL.Query().Get("username") != "" {
+		wantedUsername = r.URL.Query().Get("username")
+	}
+
 	username := checkUsername(wantedUsername, hub)
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
