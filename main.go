@@ -44,24 +44,15 @@ func main() {
 	flag.Parse()
 
 	http.HandleFunc("/", serveHome)
-	http.HandleFunc("/ws", start)
+	http.HandleFunc("/ws", addUserToRoom)
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
 
-func start(w http.ResponseWriter, r *http.Request) {
-	oldLenght := len(server.hubs)
+func addUserToRoom(w http.ResponseWriter, r *http.Request) {
 	hub := findOrCreateHub(server, r)
-	newLenght := len(server.hubs)
-
-	if newLenght > oldLenght {
-		// I really don't get it, if the hub is created we can't access the broadcast channel
-		// the only solution I currently find is to re execute the function
-		// look like the hub must be create before calling the start function
-		start(w, r)
-	}
 
 	go hub.run()
 
